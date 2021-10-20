@@ -15,14 +15,20 @@ app.get('/jaanchat', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('a user has connected');
+  socket.on('nickname',(nickname) => {
+    if(!nickname.trim() || !nickname)
+        nickname = "Anonymous";
+    socket.username = nickname;
+
+    io.emit('chat message', nickname + " has entered the chat.");
+  });
 
   socket.on('disconnect', () => {
     console.log('a user has disconnected');
   });
 
   socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+    io.emit('chat message', socket.username + ": " + msg);
   });
 });
 
