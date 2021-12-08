@@ -24,7 +24,7 @@
                 <div class="modal-body">
                     <form id="nick_form">
                         <input id="nick_input" autocomplete="off" autofocus="autofocus" onfocus="this.select()" placeholder="Please enter a nickname"/>
-                        <button id="nick_button" class="close">Enter</button>
+                        <button id="nick_button" class="close" onclick="close_nickname_modal()">Enter</button>
                     </form>
                 </div>
             </div>
@@ -34,38 +34,19 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>  
-        var socket = io();
+        let socket = io();
 
+        let modal = document.getElementById("myModal");
 
-        // Modal Functions
-        // Get the modal
-        var modal = document.getElementById("myModal");
+        //For nickname
+        let nick;
+        let nick_form = document.getElementById('nick_form');
+        let nick_input = document.getElementById('nick_input');
 
-        // Get the <span> element that closes the modal
-        var span = document.getElementsByClassName("close")[0];
-
-        // When the user clicks on <span> (x), close the modal
-        span.onclick = function() {
+        function close_nickname_modal(){
             modal.style.display = "none";
             message_input.focus();
         }
-
-        // When the user clicks anywhere outside of the modal, close it and submit an anonymous name
-        /*window.onclick = function(e) {
-            if (e.target == modal) {
-                modal.style.display = "none";
-                nick_form.submit();
-            }
-            //e.preventDefault();
-            //nick_form.submit(e);
-        }*/
-
-        //For nickname
-        var nick;
-        var nick_form = document.getElementById('nick_form');
-        var nick_input = document.getElementById('nick_input');
-
-
 
         nick_form.onsubmit = function(e){
             e.preventDefault();
@@ -76,34 +57,31 @@
             nick = nick_input.value;
         };
 
-
-        /*function nick_submit(e){
-            e.preventDefault();
-            if(!nick_input.value){
-                nick = 'Anonymous';
-            }
-            socket.emit('nickname', nick_input.value);
-            nick = nick_input.value;
-        }*/
-
         // For messages
-        var message_form = document.getElementById('message_form');  
-        var message_input = document.getElementById('message_input');
+        let message_form = document.getElementById('message_form');  
+        let message_input = document.getElementById('message_input');
 
         message_form.onsubmit = function(e) {    
             e.preventDefault();
-            if (message_input.value) {   
+            if (message_input.value) {
+                add_user_message(nick + ": " + message_input.value);
                 socket.emit('chat message', message_input.value);  
                 message_input.value = '';
             }
             return false;  
         };
 
-        socket.on('chat message', function(msg) {    
-            var item = document.createElement('li');    
+        socket.on('chat message', function(msg) {   
+            add_user_message(msg);
+        });
+
+        function add_user_message(msg){
+            let item = document.createElement('li');    
             item.textContent = msg;    
             messages.appendChild(item);    
             window.scrollTo(0, document.body.scrollHeight);  
-        });
+        }
+
+        
     </script>  
 </html>

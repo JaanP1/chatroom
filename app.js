@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (msg) => {
-    io.emit('chat message', socket.username + ": " + msg);
+    socket.broadcast.emit('chat message', socket.username + ": " + msg);
   });
 });
 
