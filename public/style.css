@@ -1,37 +1,9 @@
 body {
   margin: 0; 
-  padding-bottom: 3rem; 
+  padding-bottom: 4rem; 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
 }
             
-#nick_form{ 
-  padding: 3px; 
-  width: 100%;
-} 
-
-#nick_button{ 
-  width: 12%; 
-  background: #333; 
-  border: none; 
-  padding: 6px; 
-  border-radius: 2rem; 
-  outline: none; 
-  color: #fff;
-}
-
-#nick_input{ 
-  width:85%; 
-  padding: 6px;  
-  border: none; 
-  flex-grow: 1; 
-  border-radius: 2rem; 
-  margin: 0.25rem; 
-}
-
-#nick_input:focus { 
-  outline: none; 
-}    
-
 #message_form { 
   background: rgba(0, 0, 0, 0.15); 
   padding: 0.25rem; 
@@ -71,6 +43,7 @@ body {
   list-style-type: none; 
   margin: 0; 
   padding: 0; 
+  max-height: 300;
 }     
 
 #messages > li { 
@@ -82,30 +55,24 @@ body {
 }
 
 
-            
-/* The Modal (background) */
 .modal { 
-  display: block; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  padding-top: 300px; /* Location of the box */
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */    
+  display: block;
+  position: fixed; 
+  z-index: 1; 
+  padding-top: 300px; 
+  width: 100%; 
+  height: 100%; 
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.4);
 }
   
-  /* Modal Content */
 .modal-content {     
   position: relative;
   margin: auto;
   width: 80%;
-  -webkit-animation-name: animatetop;
-  -webkit-animation-duration: 0.4s;
   animation-name: animatetop;
   animation-duration: 0.4s;
   color: #fff;
-  
 }
   
 .modal-body {
@@ -113,13 +80,50 @@ body {
   background: rgba(0, 0, 0, 0.15);
 }
   
-  /* Add Animation For Modal*/
-@-webkit-keyframes animatetop {
-  from {top:-300px; opacity:0} 
-  to {top:0; opacity:1}
-}
-  
 @keyframes animatetop {
   from {top:-300px; opacity:0}
   to {top:0; opacity:1}
+}
+
+#nick_form{ 
+  padding: 3px; 
+  width: 100%;
+  display: flex;
+} 
+
+#nick_button{ 
+  width: 12%; 
+  background: #333; 
+  border: none; 
+  padding: 6px; 
+  border-radius: 2rem; 
+  outline: none; 
+  color: #fff;
+}
+
+#nick_input{ 
+  width:85%; 
+  padding: 6px;  
+  border: none; 
+  flex-grow: 1; 
+  border-radius: 2rem; 
+  margin: 0.25rem; 
+}
+
+#nick_input:focus { 
+  outline: none; 
+}    
+
+#user_typing{
+  background: rgba(0, 0, 0, 0.15); 
+  position: fixed; 
+  bottom: 2rem; 
+  left: 0; 
+  right: 0; 
+  display: flex; 
+  height: 1rem; 
+  box-sizing: border-box; 
+  backdrop-filter: blur(10px); 
+  visibility: hidden;
+  padding: 0.1rem 0.75rem;
 }

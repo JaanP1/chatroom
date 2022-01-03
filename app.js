@@ -20,18 +20,26 @@ io.on('connection', (socket) => {
         nickname = "Anonymous";
     socket.username = nickname;
 
-    io.emit('chat message', nickname + " has entered the chat.");
+    io.emit('chat message', socket.username + " has entered the chat.");
   });
 
   socket.on('disconnect', () => {
-    console.log('a user has disconnected');
+    socket.broadcast.emit('chat message', socket.username + " has disconnected.");
   });
 
   socket.on('chat message', (msg) => {
     socket.broadcast.emit('chat message', socket.username + ": " + msg);
   });
+
+  socket.on('typing', () => {
+    socket.broadcast.emit("typing", socket.username);
+  });
+
+  socket.on('not typing', () => {
+    socket.broadcast.emit("not typing", socket.username);
+  });
 });
 
-server.listen(3000, () => {  
+server.listen(3000, () => {
   console.log('listening on *:3000');
 });

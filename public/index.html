@@ -12,15 +12,19 @@
         <!--- The messages go here-->
         <ul id="messages"></ul>   
         
-        <!---message input nad submit button--> 
-        <form id="message_form" action="">      
+
+        <!---user is typing message-->
+        <p id="user_typing" style="visibility:hidden"></p>
+
+        <!---message input and submit button--> 
+        <form id="message_form" action="">     
             <input id="message_input" autocomplete="off" /> 
             <button>Send</button>    
         </form>
 
         <!-- The Modal for nickname -->
         <div id="myModal" class="modal">
-            <div class="modal-content"> 
+            <div class="modal-content">
                 <div class="modal-body">
                     <form id="nick_form">
                         <input id="nick_input" autocomplete="off" autofocus="autofocus" onfocus="this.select()" placeholder="Please enter a nickname"/>
@@ -38,7 +42,9 @@
 
         let modal = document.getElementById("myModal");
 
-        //For nickname
+        let message_form = document.getElementById('message_form');  
+        let message_input = document.getElementById('message_input');
+
         let nick;
         let nick_form = document.getElementById('nick_form');
         let nick_input = document.getElementById('nick_input');
@@ -56,10 +62,6 @@
             socket.emit('nickname', nick_input.value);
             nick = nick_input.value;
         };
-
-        // For messages
-        let message_form = document.getElementById('message_form');  
-        let message_input = document.getElementById('message_input');
 
         message_form.onsubmit = function(e) {    
             e.preventDefault();
@@ -79,9 +81,65 @@
             let item = document.createElement('li');    
             item.textContent = msg;    
             messages.appendChild(item);    
-            window.scrollTo(0, document.body.scrollHeight);  
+            window.scrollTo(0, document.body.scrollHeight + 300);  
         }
 
-        
-    </script>  
+        let typingTimeout;
+        let isUserTypingFlag = false;
+
+        message_input.onkeypress = function(e){
+            if(e.keyCode == 13){
+                return;
+            }
+
+            clearTimeout(typingTimeout);
+
+            if(!isUserTypingFlag){
+                isUserTypingFlag = true;
+                socket.emit('typing', nick);
+            }
+
+            typingTimeout = setTimeout(stoppedTypingTimeOut, 3000);
+        }
+
+        function stoppedTypingTimeOut(){
+            socket.emit('not typing', nick);
+            isUserTypingFlag = false;
+        }
+
+        let usersTyping = new Set();
+
+        socket.on("typing", function(name){
+            if(!usersTyping.has(name)){
+                usersTyping.add(name);
+                userIsTypingMessage(usersTyping);
+            }
+        });
+
+        socket.on("not typing", function(name){
+            if(usersTyping.has(name)){
+                usersTyping.delete(name);
+                userIsTypingMessage(usersTyping);
+            }
+        });
+
+        function userIsTypingMessage(userTyping){
+
+            if (userTyping.size == 0){
+                document.getElementById("user_typing").style.visibility = "hidden";
+            } else{
+                let typing = "";
+                userTyping.forEach(key => typing = typing == "" ? typing += key : typing += ", " + key);
+
+                if(userTyping.size == 1){
+                    document.getElementById("user_typing").innerHTML = "Following user is typing: " + typing;
+                } else{
+                    document.getElementById("user_typing").innerHTML = "Following users are typing: " + typing;
+                }
+                
+                document.getElementById("user_typing").style.visibility = "visible";
+            }
+        };
+    
+    </script>
 </html>
