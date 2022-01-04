@@ -5,7 +5,7 @@
             
         <title>JaanChat</title>
 
-        <link rel="stylesheet" type="text/css" href="style.css">   
+        <link rel="stylesheet" type="text/css" href="styles/chatroom_style.css">   
     </head>  
     
     <body>    
@@ -48,10 +48,12 @@
         let nick;
         let nick_form = document.getElementById('nick_form');
         let nick_input = document.getElementById('nick_input');
+        let nicknameChosen = false;
 
         function close_nickname_modal(){
             modal.style.display = "none";
             message_input.focus();
+            nicknameChosen = true;
         }
 
         nick_form.onsubmit = function(e){
@@ -73,15 +75,17 @@
             return false;  
         };
 
-        socket.on('chat message', function(msg) {   
-            add_user_message(msg);
+        socket.on('chat message', function(msg) {
+            if(nicknameChosen){   
+                add_user_message(msg);
+            }
         });
 
         function add_user_message(msg){
             let item = document.createElement('li');    
             item.textContent = msg;    
             messages.appendChild(item);    
-            window.scrollTo(0, document.body.scrollHeight + 300);  
+            window.scrollTo(0, document.body.scrollHeight);  
         }
 
         let typingTimeout;
