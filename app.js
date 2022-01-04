@@ -10,8 +10,12 @@ app.use(
   express.static(path.join(__dirname, 'public'))
 );
 
-app.get('/jaanchat', (req, res) => {  
-  res.sendFile(__dirname + '/public/index.html');
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/homepage.html');
+});
+
+app.get('/chatroom', (req, res) => {  
+  res.sendFile(__dirname + '/public/chatroom.html');
 });
 
 io.on('connection', (socket) => {

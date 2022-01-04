@@ -55,6 +55,10 @@ body {
 }
 
 
+#myModal{
+  position:fixed;
+}
+
 .modal { 
   display: block;
   position: fixed; 
