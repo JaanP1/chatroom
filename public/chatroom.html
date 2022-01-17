@@ -9,12 +9,13 @@
     </head>  
     
     <body>    
+        <p id="show_online">Users online: </p>
+
         <!--- The messages go here-->
         <ul id="messages"></ul>   
         
-
         <!---user is typing message-->
-        <p id="user_typing" style="visibility:hidden"></p>
+        <p id="user_typing"></p>
 
         <!---message input and submit button--> 
         <form id="message_form" action="">     
@@ -33,9 +34,12 @@
                 </div>
             </div>
         </div>
+
     </body>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="../node_modules/socket.io/socket.io.js"></script>
+    <scricpt src="../node_modules/socket.io/client-dist/socket.io.js"></scricpt>
 
     <script>  
         let socket = io();
@@ -45,6 +49,8 @@
         let message_form = document.getElementById('message_form');  
         let message_input = document.getElementById('message_input');
 
+
+        //Nickname
         let nick;
         let nick_form = document.getElementById('nick_form');
         let nick_input = document.getElementById('nick_input');
@@ -65,6 +71,24 @@
             nick = nick_input.value;
         };
 
+        
+        //user is Online
+        socket.on('whoIsOnline',function(onlineUsers) {
+            let whoIsOnlineMessage = "";
+            for(let i = 0; i < onlineUsers.length; i++){
+                if(whoIsOnlineMessage == ""){
+                    whoIsOnlineMessage = "Users Online: " + onlineUsers[i];
+                }
+                else{
+                    whoIsOnlineMessage += ", " + onlineUsers[i];
+                }
+            }
+            
+            document.getElementById("show_online").innerHTML = whoIsOnlineMessage;
+        });
+        
+
+        //messages
         message_form.onsubmit = function(e) {    
             e.preventDefault();
             if (message_input.value) {
@@ -88,6 +112,10 @@
             window.scrollTo(0, document.body.scrollHeight);  
         }
 
+
+
+
+        //User is typing
         let typingTimeout;
         let isUserTypingFlag = false;
 
@@ -100,14 +128,14 @@
 
             if(!isUserTypingFlag){
                 isUserTypingFlag = true;
-                socket.emit('typing', nick);
+                socket.emit("typing", nick);
             }
 
-            typingTimeout = setTimeout(stoppedTypingTimeOut, 3000);
+            typingTimeout = setTimeout(stoppedTypingTimeOut, 2000);
         }
 
         function stoppedTypingTimeOut(){
-            socket.emit('not typing', nick);
+            socket.emit("not typing", nick);
             isUserTypingFlag = false;
         }
 
