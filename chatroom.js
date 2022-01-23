@@ -46,6 +46,17 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('chat message', socket.username + ": " + msg);
   });
 
+  socket.on("private message", (sendTo, message) => {
+    const usernameIterator = io.of('/').sockets.keys();
+    let id;
+    for(const user of usernameIterator){
+      if(io.of('/').sockets.get(user).username == sendTo){
+        id = user;
+      };
+    }
+    socket.to(id).emit("private message", socket.username, message);
+  });
+
   //when the user is typing
   socket.on('typing', () => {
     socket.broadcast.emit("typing", socket.username);

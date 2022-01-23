@@ -1,40 +1,43 @@
 <!DOCTYPE html>
-<html>  
+
+<html lang="en">  
     <head>
         <meta charset="UTF-8">
-            
         <title>JaanChat</title>
-
-        <link rel="stylesheet" type="text/css" href="styles/chatroom_style.css">   
+        <link rel="stylesheet" href="styles/chatroom_style.css">   
     </head>  
     
-    <body>    
-        <p id="show_online">Users online: </p>
-
-        <!--- The messages go here-->
-        <ul id="messages"></ul>   
+    <body>
+        <!-- Nickname -->
+        <div id="nickname">
+            <form id="nick-form">
+                <input id="nick-input" autocomplete="off" autofocus placeholder="Please enter a nickname"/>
+                <button id="nick-button" onclick="closeNicknameWindow()">Enter</button>
+            </form>
+        </div>
         
-        <!---user is typing message-->
-        <p id="user_typing"></p>
+        <!--A list of users who are online--> 
+        <p id="online-user-list"></p>
 
-        <!---message input and submit button--> 
-        <form id="message_form" action="">     
-            <input id="message_input" autocomplete="off" /> 
-            <button>Send</button>    
-        </form>
-
-        <!-- The Modal for nickname -->
-        <div id="myModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <form id="nick_form">
-                        <input id="nick_input" autocomplete="off" autofocus="autofocus" onfocus="this.select()" placeholder="Please enter a nickname"/>
-                        <button id="nick_button" class="close" onclick="close_nickname_modal()">Enter</button>
-                    </form>
-                </div>
-            </div>
+        <!--private messages-->
+        <div id="private-message">
+            <button id="private-message-button">Private Message</button>
+            <div id="private-message-user-list"></div>
         </div>
 
+        <!-- The messages go here -->
+        <ul id="messages"></ul>   
+        
+        <!-- user is typing message -->
+        <p id="user-typing"></p>
+
+        <!-- message input and submit button --> 
+        <form id="message-form" action="">     
+            <p id="private-message-sending-to"></p>
+            <input id="message-input" autocomplete="off" /> 
+            <button type="submit" id="send">Send</button>    
+            <button type="reset" id="cancel">Cancel</button>
+        </form>
     </body>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -44,132 +47,201 @@
     <script>  
         let socket = io();
 
-        let modal = document.getElementById("myModal");
+        // Nickname
+        let nicknameWindow = document.getElementById("nickname"); // nickname window
+        let nickname = null; //nickname chosen by the user
+        let nickForm = document.getElementById('nick-form');
+        let nickInput = document.getElementById('nick-input');
+        let isNicknameChosen = false;
 
-        let message_form = document.getElementById('message_form');  
-        let message_input = document.getElementById('message_input');
-
-
-        //Nickname
-        let nick;
-        let nick_form = document.getElementById('nick_form');
-        let nick_input = document.getElementById('nick_input');
-        let nicknameChosen = false;
-
-        function close_nickname_modal(){
-            modal.style.display = "none";
-            message_input.focus();
-            nicknameChosen = true;
+        function closeNicknameWindow(){
+            nicknameWindow.style.display = "none";
+            messageInput.focus();
+            isNicknameChosen = true;
+            document.getElementById("private-message").style.display = "block";
         }
 
-        nick_form.onsubmit = function(e){
+        nickForm.onsubmit = function(e){
             e.preventDefault();
-            if(!nick_input.value){
-                nick = 'Anonymous';
+            if(!nickInput.value){
+                nickname = 'Anonymous';
             }
-            socket.emit('nickname', nick_input.value);
-            nick = nick_input.value;
+            socket.emit('nickname', nickInput.value);
+            nickname = nickInput.value;
         };
 
-        
-        //user is Online
+         
+        // user is Online
+        let usersOnline;
         socket.on('whoIsOnline',function(onlineUsers) {
             let whoIsOnlineMessage = "";
-            for(let i = 0; i < onlineUsers.length; i++){
+            usersOnline = onlineUsers;
+            for(let i = 0; i < usersOnline.length; i++){
                 if(whoIsOnlineMessage == ""){
-                    whoIsOnlineMessage = "Users Online: " + onlineUsers[i];
+                    whoIsOnlineMessage = "Users Online: " + usersOnline[i];
                 }
                 else{
-                    whoIsOnlineMessage += ", " + onlineUsers[i];
+                    whoIsOnlineMessage += ", " + usersOnline[i];
                 }
             }
             
-            document.getElementById("show_online").innerHTML = whoIsOnlineMessage;
+            document.getElementById("online-user-list").innerHTML = whoIsOnlineMessage;
         });
+
+        // private messaging
+        let isPrivateUserListVisible = false;
+        let isPrivateMessageModeActive = false;
+        let sendPrivateMessageTo;
+        let privateMessageUserList = document.getElementById("private-message-user-list");
+        let privateMessageUserButtons = document.getElementsByClassName("private_message_user_buttons");
+        let privateMessageSendingToMessage = document.getElementById("private-message-sending-to");
+
+        // when the Private Message at the top right corner of the screen is clicked
+        document.getElementById("private-message-button").onclick = function(){
+            privateMessageUserList.style.display = isPrivateUserListVisible ? "none": "block"; // toggle the list
+            isPrivateUserListVisible = !isPrivateUserListVisible;
+
+            // Remove all the useers from the list
+            while(privateMessageUserButtons.length > 0){
+                privateMessageUserButtons[0].remove();
+            }
+
+            // Add users back to the list, create a button for each online user
+            for(let i = 0; i < usersOnline.length; i++){
+                var privateButton = document.createElement("button");
+                privateButton.innerText = usersOnline[i];
+                privateButton.className = "private_message_user_buttons";
+                privateMessageUserList.appendChild(privateButton);
+            }
+
+            // Check any click on the private message button and activate private message mode
+            for(let i = 0; i < privateMessageUserButtons.length; i++){
+                privateMessageUserButtons[i].onclick = function(){
+                    privateMessageSendingToMessage.style.display = "inline";
+                    privateMessageSendingToMessage.innerText = "Sending private message to " + privateMessageUserButtons[i].innerText + ":";
+                    sendPrivateMessageTo = privateMessageUserButtons[i].innerText;
+                    messageForm.style.backgroundColor = "rgba(255, 75, 75, 0.75)"; 
+                    messageInput.style.backgroundColor = "rgba(255, 225, 225, 0.75)"; 
+                    messageInput.focus();
+                    privateMessageUserList.style.display = isPrivateUserListVisible ? "none": "block";
+                    isPrivateUserListVisible = !isPrivateUserListVisible;
+                    isPrivateMessageModeActive = true;
+                };
+            }
+        };
         
 
-        //messages
-        message_form.onsubmit = function(e) {    
+        // cancel button, gets rid of any input and takes user out of private messsage mode
+        document.getElementById("cancel").onclick = cancelPrivateMessageMode();
+        
+        function cancelPrivateMessageMode(){
+            if(isPrivateMessageModeActive){
+                privateMessageSendingToMessage.style.display = "none";
+                messageForm.style.backgroundColor = "rgba(0, 0, 0, 0.15)"; 
+                messageInput.style.backgroundColor = "white"; 
+                isPrivateMessageModeActive = false;
+            }
+        }
+
+        // normal messages
+        let messageForm = document.getElementById('message-form');  
+        let messageInput = document.getElementById('message-input');
+
+        // Send Message
+        messageForm.onsubmit = function(e) {    
             e.preventDefault();
-            if (message_input.value) {
-                add_user_message(nick + ": " + message_input.value);
-                socket.emit('chat message', message_input.value);  
-                message_input.value = '';
+            if (messageInput.value) {
+                if(isPrivateMessageModeActive){ //send private message to user if the user is in private message mode
+                    addUserMessage("Private Message Sent To " + sendPrivateMessageTo +": " + messageInput.value, true); // make it appear on the client screen
+                    socket.emit("private message", sendPrivateMessageTo, messageInput.value); // send the message to the server
+                    cancelPrivateMessageMode();
+                } else{ // Normal Message
+                    addUserMessage(nickname + ": " + messageInput.value, false);
+                    socket.emit('chat message', messageInput.value);  
+                }
+
+                messageInput.value = '';
             }
             return false;  
         };
 
+
+        // Receive Message
         socket.on('chat message', function(msg) {
-            if(nicknameChosen){   
-                add_user_message(msg);
+            if(isNicknameChosen){   
+                addUserMessage(msg, false);
             }
         });
 
-        function add_user_message(msg){
+        socket.on("private message", function(from, msg){
+            if(isNicknameChosen){   
+                addUserMessage("Private Message From " + from + " :" + msg, true);
+            }
+        });
+
+        function addUserMessage(msg, isPrivate){
             let item = document.createElement('li');    
             item.textContent = msg;    
             messages.appendChild(item);    
+            if(isPrivate){
+                item.style.backgroundColor = "rgba(255, 75, 75, 0.75)";
+            }
             window.scrollTo(0, document.body.scrollHeight);  
         }
 
+        // User is typing
+        let typingTimeout = null;
+        let isUserTyping = false;
 
-
-
-        //User is typing
-        let typingTimeout;
-        let isUserTypingFlag = false;
-
-        message_input.onkeypress = function(e){
-            if(e.keyCode == 13){
+        messageInput.onkeypress = function(e){ // let the server know the user has started typing
+            if(e.keyCode == 13 || isPrivateMessageModeActive){ // don't show the user is tytping for enter key and if the user is in private mode
                 return;
             }
 
             clearTimeout(typingTimeout);
 
-            if(!isUserTypingFlag){
-                isUserTypingFlag = true;
-                socket.emit("typing", nick);
+            if(!isUserTyping){ // check if the user is typing
+                isUserTyping = true;
+                socket.emit("typing", nickname);
             }
 
-            typingTimeout = setTimeout(stoppedTypingTimeOut, 2000);
+            typingTimeout = setTimeout(stoppedTypingTimeOut, 2000); // set a timeout in milliseconds, once it runs out let the server know the user has stopped typing
         }
 
-        function stoppedTypingTimeOut(){
-            socket.emit("not typing", nick);
-            isUserTypingFlag = false;
+        function stoppedTypingTimeOut(){ // let the server know the user has stopped typing
+            socket.emit("not typing", nickname);
+            isUserTyping = false;
         }
 
-        let usersTyping = new Set();
-
-        socket.on("typing", function(name){
-            if(!usersTyping.has(name)){
-                usersTyping.add(name);
-                userIsTypingMessage(usersTyping);
+        let usersTypingSet = new Set(); // a set that stores the users that are typing
+        socket.on("typing", function(name){ // add the users that are typing to the set here
+            if(!usersTypingSet.has(name)){ 
+                usersTypingSet.add(name);
+                userIsTypingMessage(usersTypingSet); // update the message after the set has been changed
             }
         });
 
-        socket.on("not typing", function(name){
-            if(usersTyping.has(name)){
-                usersTyping.delete(name);
-                userIsTypingMessage(usersTyping);
+        socket.on("not typing", function(name){ // remove the user from set, update the message
+            if(usersTypingSet.has(name)){
+                usersTypingSet.delete(name);
+                userIsTypingMessage(usersTypingSet);
             }
         });
 
-        function userIsTypingMessage(userTyping){
-
-            if (userTyping.size == 0){
-                document.getElementById("user_typing").style.visibility = "hidden";
+        function userIsTypingMessage(userTyping){ 
+            if (userTyping.size == 0){ // hide the message
+                document.getElementById("user-typing").style.visibility = "hidden";
             } else{
                 let typing = "";
-                userTyping.forEach(key => typing = typing == "" ? typing += key : typing += ", " + key);
+                userTyping.forEach(key => typing = typing == "" ? typing += key : typing += ", " + key); // concatanate the set of users who are typing
 
                 if(userTyping.size == 1){
-                    document.getElementById("user_typing").innerHTML = "Following user is typing: " + typing;
+                    document.getElementById("user-typing").innerHTML = "Following user is typing: " + typing;
                 } else{
-                    document.getElementById("user_typing").innerHTML = "Following users are typing: " + typing;
+                    document.getElementById("user-typing").innerHTML = "Following users are typing: " + typing;
                 }
                 
-                document.getElementById("user_typing").style.visibility = "visible";
+                document.getElementById("user-typing").style.visibility = "visible";
             }
         };
     
