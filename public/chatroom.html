@@ -11,8 +11,8 @@
         <!-- Nickname -->
         <div id="nickname">
             <form id="nick-form">
-                <input id="nick-input" autocomplete="off" autofocus placeholder="Please enter a nickname"/>
-                <button id="nick-button" onclick="closeNicknameWindow()">Enter</button>
+                <input id="nick-input" maxlength="15" autocomplete="off" autofocus placeholder="Please enter a nickname"/>
+                <button id="nick-button">Enter</button>
             </form>
         </div>
         
@@ -50,9 +50,20 @@
         // Nickname
         let nicknameWindow = document.getElementById("nickname"); // nickname window
         let nickname = null; //nickname chosen by the user
-        let nickForm = document.getElementById('nick-form');
-        let nickInput = document.getElementById('nick-input');
+        let nickForm = document.getElementById("nick-form");
+        let nickInput = document.getElementById("nick-input");
         let isNicknameChosen = false;
+
+        nickForm.onsubmit = function(e){
+            e.preventDefault();
+            if(!nickInput.value){
+                nickname = "Anonymous";
+            }
+            socket.emit("nickname", nickInput.value);
+            nickname = nickInput.value;
+
+            closeNicknameWindow();
+        };
 
         function closeNicknameWindow(){
             nicknameWindow.style.display = "none";
@@ -60,20 +71,10 @@
             isNicknameChosen = true;
             document.getElementById("private-message").style.display = "block";
         }
-
-        nickForm.onsubmit = function(e){
-            e.preventDefault();
-            if(!nickInput.value){
-                nickname = 'Anonymous';
-            }
-            socket.emit('nickname', nickInput.value);
-            nickname = nickInput.value;
-        };
-
          
         // user is Online
         let usersOnline;
-        socket.on('whoIsOnline',function(onlineUsers) {
+        socket.on("whoIsOnline",function(onlineUsers) {
             let whoIsOnlineMessage = "";
             usersOnline = onlineUsers;
             for(let i = 0; i < usersOnline.length; i++){
@@ -85,7 +86,9 @@
                 }
             }
             
-            document.getElementById("online-user-list").innerHTML = whoIsOnlineMessage;
+            if(isNicknameChosen){
+                document.getElementById("online-user-list").innerHTML = whoIsOnlineMessage;
+            }
         });
 
         // private messaging
@@ -93,7 +96,7 @@
         let isPrivateMessageModeActive = false;
         let sendPrivateMessageTo;
         let privateMessageUserList = document.getElementById("private-message-user-list");
-        let privateMessageUserButtons = document.getElementsByClassName("private_message_user_buttons");
+        let privateMessageUserButtons = document.getElementsByClassName("private-message-user-buttons");
         let privateMessageSendingToMessage = document.getElementById("private-message-sending-to");
 
         // when the Private Message at the top right corner of the screen is clicked
@@ -101,7 +104,7 @@
             privateMessageUserList.style.display = isPrivateUserListVisible ? "none": "block"; // toggle the list
             isPrivateUserListVisible = !isPrivateUserListVisible;
 
-            // Remove all the useers from the list
+            // Remove all the users from the list
             while(privateMessageUserButtons.length > 0){
                 privateMessageUserButtons[0].remove();
             }
@@ -110,7 +113,7 @@
             for(let i = 0; i < usersOnline.length; i++){
                 var privateButton = document.createElement("button");
                 privateButton.innerText = usersOnline[i];
-                privateButton.className = "private_message_user_buttons";
+                privateButton.className = "private-message-user-buttons";
                 privateMessageUserList.appendChild(privateButton);
             }
 
@@ -144,8 +147,8 @@
         }
 
         // normal messages
-        let messageForm = document.getElementById('message-form');  
-        let messageInput = document.getElementById('message-input');
+        let messageForm = document.getElementById("message-form");  
+        let messageInput = document.getElementById("message-input");
 
         // Send Message
         messageForm.onsubmit = function(e) {    
@@ -157,17 +160,17 @@
                     cancelPrivateMessageMode();
                 } else{ // Normal Message
                     addUserMessage(nickname + ": " + messageInput.value, false);
-                    socket.emit('chat message', messageInput.value);  
+                    socket.emit("chat message", messageInput.value);  
                 }
 
-                messageInput.value = '';
+                messageInput.value = "";
             }
             return false;  
         };
 
 
         // Receive Message
-        socket.on('chat message', function(msg) {
+        socket.on("chat message", function(msg) {
             if(isNicknameChosen){   
                 addUserMessage(msg, false);
             }
@@ -175,12 +178,12 @@
 
         socket.on("private message", function(from, msg){
             if(isNicknameChosen){   
-                addUserMessage("Private Message From " + from + " :" + msg, true);
+                addUserMessage("Private Message From " + from + ": " + msg, true);
             }
         });
 
         function addUserMessage(msg, isPrivate){
-            let item = document.createElement('li');    
+            let item = document.createElement("li");    
             item.textContent = msg;    
             messages.appendChild(item);    
             if(isPrivate){
@@ -194,7 +197,7 @@
         let isUserTyping = false;
 
         messageInput.onkeypress = function(e){ // let the server know the user has started typing
-            if(e.keyCode == 13 || isPrivateMessageModeActive){ // don't show the user is tytping for enter key and if the user is in private mode
+            if(e.keyCode == 13 || isPrivateMessageModeActive){ // don"t show the user is tytping for enter key and if the user is in private mode
                 return;
             }
 

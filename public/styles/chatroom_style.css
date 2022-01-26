@@ -92,7 +92,7 @@ button{
 /*private messageing */
 
 #private-message{
-  position: absolute;
+  position: fixed;
   display:none;
   top: 0;
   right: 1rem;
@@ -115,7 +115,7 @@ button{
 
 }
 
-.private_message_user_buttons{
+.private-message-user-buttons{
   display: block;
   padding: 0.1rem;
 }
