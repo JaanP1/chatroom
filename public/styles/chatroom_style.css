@@ -6,6 +6,17 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
 }
 
+@media screen and (max-width:600px) {
+  html{
+    font-size: 2rem;
+  }
+
+  #private-message-button{
+    width: 5rem;
+    height: 2rem;
+  }
+}
+
 button{
   margin: 0.25rem; 
   outline: none; 
@@ -99,7 +110,7 @@ button{
   z-index : 2;  
 }
 
-#private-message button{
+#private-message-button{
   width: 10rem;
   height: 2rem;
 }
@@ -118,6 +129,7 @@ button{
 .private-message-user-buttons{
   display: block;
   padding: 0.1rem;
+  width: 95%;
 }
 
 #private-message-sending-to{
