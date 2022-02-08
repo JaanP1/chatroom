@@ -7,22 +7,20 @@ const io = new Server(server);
 const path = require("path");
 const { isUndefined } = require("util");
 
-app.use(
-  express.static(path.join(__dirname, "public"))
-);
+app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/", (req, res) => {  
+app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/chatroom.html");
 });
 
 //when a user establishes a new connection
 io.on("connection", (socket) => {
-  socket.on("nickname",(nickname) => {
-    if(!nickname.trim() || !nickname){
-        nickname = "Anonymous";
+  socket.on("nickname", (nickname) => {
+    if (!nickname.trim() || !nickname) {
+      nickname = "Anonymous";
     }
 
-    if(nickname.length > 15){
+    if (nickname.length > 15) {
       nickname = nickname.substring(0, 14);
     }
 
@@ -34,43 +32,47 @@ io.on("connection", (socket) => {
 
   //when the user disconnects
   socket.on("disconnect", () => {
-    if(socket.username != undefined){
-      socket.broadcast.emit("chat message", socket.username + " has disconnected.");
+    if (socket.username != undefined) {
+      socket.broadcast.emit(
+        "chat message",
+        socket.username + " has disconnected."
+      );
     }
 
     checkConnectedUsers();
   });
 
-  function checkConnectedUsers(){
-    if(socket.username == undefined || socket.username == null){
+  function checkConnectedUsers() {
+    if (socket.username == undefined || socket.username == null) {
       return;
     }
 
     const usernameIterator = io.of("/").sockets.keys();
     const connectedUsers = [];
-    for(const name of usernameIterator){
-      console.log(typeof(io.of("/").sockets.get(name).username), io.of("/").sockets.get(name).username);
-      if(io.of("/").sockets.get(name).username != undefined ){
+
+    for (const name of usernameIterator) {
+      if (io.of("/").sockets.get(name).username != undefined) {
         connectedUsers.push(io.of("/").sockets.get(name).username);
       }
     }
 
     io.emit("whoIsOnline", connectedUsers);
     return;
-  };
+  }
 
   //when the user sends a chat message
   socket.on("chat message", (msg) => {
     socket.broadcast.emit("chat message", socket.username + ": " + msg);
   });
 
+  // private messaging
   socket.on("private message", (sendTo, message) => {
     const usernameIterator = io.of("/").sockets.keys();
     let id;
-    for(const user of usernameIterator){
-      if(io.of("/").sockets.get(user).username == sendTo){
+    for (const user of usernameIterator) {
+      if (io.of("/").sockets.get(user).username == sendTo) {
         id = user;
-      };
+      }
     }
     socket.to(id).emit("private message", socket.username, message);
   });
@@ -86,5 +88,4 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(80, () => {
-});
+server.listen(80, () => {});
