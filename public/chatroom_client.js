@@ -86,7 +86,13 @@ socket.on("private message", function (from, msg) {
   }
 });
 
-function addUserMessage(msg, isPrivate) {
+socket.on("load previous messages", function(msg_block){
+  for (let i = msg_block.length - 1; i >= 0; i--){
+    addUserMessage(msg_block[i]['sent_by'] + ": " + msg_block[i]['message']);
+  }
+});
+
+function addUserMessage(msg, isPrivate=false) {
   let item = document.createElement("li");
   item.textContent = msg;
   messages.appendChild(item);
