@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>JaanChat</title>
+    <link rel="stylesheet" href="styles/pass_style.css">
+    <link rel="icon" href="styles/favicon.ico">
+</head>
+
+<body>
+    <div id="pass">
+        <form id="pass-form" method="post" action="/pass-form">
+            <input required type="password" id="passinput" name="passinput" maxlength="15" autocomplete="off" autofocus placeholder="Please enter a password"/>
+            <button id="pass-button">Enter Password</button>
+        </form>
+    </div>
+</body>
+
+
+</html>
+
+<script>
+
+    let passWindow = document.getElementById("pass"); // pass window
+    let pass = null; //pass chosen by the user
+    let passForm = document.getElementById("pass-form");
+    let passInput = document.getElementById("passinput");
+    let isPassChosen = false;
+
+    function closePassWindow() {
+        passWindow.style.display = "none";
+        messageInput.focus();
+        ispassChosen = true;
+        document.getElementById("private-message").style.display = "block";
+    }
+</script>
