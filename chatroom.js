@@ -6,47 +6,88 @@ const { Server } = require("socket.io");
 const io = new Server(server);
 const path = require("path");
 const { isUndefined } = require("util");
-const mysql = require('mysql');
+// const mysql = require('mysql');
+const database = require('./database');
+const bodyParser = require("body-parser");
+
+console.log("Server Start");
+let roomName = null;
+let chatroom_id = null;
+let is_saved = false;
+let isPassEnter = false;
+let preloadedMessages = null;
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use(bodyParser.urlencoded({extended: true}));
 
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/chatroom.html");
+  res.sendFile(__dirname + "/public/index.html");
 });
 
-app.get("/hello", (req, res) => {
-  res.sendFile(__dirname + "/public/chatroom.html");
+app.get("/:id", async (req, res) => {
+  roomName = req.params.id;
+  database.databaseInitialise();
+  if (!chatroom_id){
+    chatroom_id = await database.getChatroomId(roomName);
+  }
+
+  is_saved = await database.isSaved(roomName);
+
+  if (is_saved && !preloadedMessages){
+    preloadedMessages = await database.getMessages(chatroom_id);
+  }
+  const badName = new Set(["password", "createroom", "login", "index","pass-form"]);
+
+  if(badName.has(roomName.toLowerCase())){
+    res.redirect("/");
+  }
+
+  let isPassRequired = await database.checkPasswordRequirement(roomName);
+  if (isPassRequired && !isPassEnter){
+    res.sendFile(__dirname + "/public/login.html");
+  }
+  else{
+    isPassEnter = false;
+    res.sendFile(__dirname + "/public/chatroom.html");
+  }
+
 });
 
-app.get("/chatroom", (req, res) => {
-  res.sendFile(__dirname + "/public/chatroom.html");
+app.post("/", (req, res) => {
+  roomName = req.body.eroom;
+  if (roomName.trim()){
+    res.redirect(roomName);
+  }
 });
 
-const database_connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'wassup',
-  password: 'hello123',
-  database: 'chatroom'
+app.post("/createroom", async (req, res) => {
+  let body = req.body;
+  roomName = body.croom;
+  if (roomName.trim()){
+    database.databaseInitialise();
+    await database.createNewChatroom(roomName, body.pass == "on" ? true : false , body.password, body.save == "on" ? true : false);
+    isPassEnter = body.pass == "on" ? true : false;
+    chatroom_id = await database.getChatroomId(roomName);
+    is_saved = await database.isSaved(roomName);
+    if (is_saved){
+      preloadedMessages = await database.getMessages(chatroom_id);
+      //console.log("this is prelaoded" , preloadedMessages);
+    }
+    res.redirect(roomName);
+  }
 });
 
-database_connection.connect(function(e) {
-  if (e) throw e;
-  console.log("Database Connected!");
+app.post("/pass-form", async (req, res) => {
+  isPassEnter = await database.checkPassword(roomName, req.body.passinput);
+  res.redirect(roomName);
 });
 
-function saveMessage(sql){
-  database_connection.query(sql, function (e, res){
-  if (e) throw e;  
-  });
-}
-
-io.of("/hello").on("connection", (socket) => {
-  console.log("hello world1!!1");
-});
-
-
+//Chat room sockets
 //when a user establishes a new connection
 io.of("/").on("connection", (socket) => {
+  socket.join(roomName);
+
+  socket.roomName = roomName;
   socket.on("nickname", (nickname) => {
     if (!nickname.trim() || !nickname) {
       nickname = "Anonymous";
@@ -58,23 +99,18 @@ io.of("/").on("connection", (socket) => {
 
     socket.username = nickname;
 
-    database_connection.query("SELECT * FROM messages WHERE chatroom_id = 1 and is_private = false order by message_id desc limit 50", function (e, res){
-      if (e) throw e;
-      io.emit("load previous messages", res);
-      io.emit("chat message", socket.username + " has entered the chat.");
-    });
+    database.databaseInitialise();
+    database.createNewChatroom(roomName);
 
-    
     checkConnectedUsers();
-
-    
-
+    socket.to(socket.roomName).emit("chat message", socket.username + " has entered the chat.");
+    socket.emit("load previous messages", preloadedMessages);
   });
 
   //when the user disconnects
   socket.on("disconnect", () => {
     if (socket.username != undefined) {
-      socket.broadcast.emit(
+      socket.to(socket.roomName).emit(
         "chat message",
         socket.username + " has disconnected."
       );
@@ -87,25 +123,25 @@ io.of("/").on("connection", (socket) => {
     if (socket.username == undefined || socket.username == null) {
       return;
     }
-
-    const usernameIterator = io.of("/").sockets.keys();
-    const connectedUsers = [];
-
-    for (const name of usernameIterator) {
-      if (io.of("/").sockets.get(name).username != undefined) {
-        connectedUsers.push(io.of("/").sockets.get(name).username);
+    
+    io.in(roomName).allSockets().then(function(value){
+      let connectedUsers = [];
+      for (const name of value){
+        if (io.of("/").sockets.get(name).username != undefined) {
+          connectedUsers.push(io.of("/").sockets.get(name).username);
+        }
       }
-    }
-
-    io.emit("whoIsOnline", connectedUsers);
+      io.to(socket.roomName).emit("whoIsOnline", connectedUsers, roomName);
+    });
     return;
   }
 
   //when the user sends a chat message
   socket.on("chat message", (message) => {
-    socket.broadcast.emit("chat message", socket.username + ": " + message);
-    let sql_query = "INSERT INTO messages (chatroom_id, sent_by, message, is_private) VALUES(1," + mysql.escape(socket.username) + "," + mysql.escape(message) + ",false)";
-    saveMessage(sql_query);
+    socket.broadcast.to(socket.roomName).emit("chat message", socket.username + ": " + message);
+    if(is_saved){
+      database.insertMessage(chatroom_id, socket.username, message, false);
+    }
   });
 
   // private messaging
@@ -118,19 +154,16 @@ io.of("/").on("connection", (socket) => {
       }
     }
     socket.to(id).emit("private message", socket.username, message);
-    let sql_query = "INSERT INTO messages (chatroom_id, sent_by, message, is_private, sent_to) VALUES(1," + mysql.escape(socket.username) + "," + mysql.escape(message)
-     + ",true, " + mysql.escape(sendTo) + ")";
-     saveMessage(sql_query);
   });
 
   //when the user is typing
   socket.on("typing", () => {
-    socket.broadcast.emit("typing", socket.username);
+    socket.broadcast.to(socket.roomName).emit("typing", socket.username);
   });
 
   //when the user stops typing
   socket.on("not typing", () => {
-    socket.broadcast.emit("not typing", socket.username);
+    socket.broadcast.to(socket.roomName).emit("not typing", socket.username);
   });
 });
 

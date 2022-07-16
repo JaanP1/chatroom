@@ -1,4 +1,4 @@
-let socket = io();
+let socket = io({autoConnect: false});
 
 // Nickname
 let nicknameWindow = document.getElementById("nickname"); // nickname window
@@ -9,6 +9,7 @@ let isNicknameChosen = false;
 
 nickForm.onsubmit = function (e) {
   e.preventDefault();
+  socket.connect();
   if (!nickInput.value) {
     nickname = "Anonymous";
   }
@@ -27,12 +28,12 @@ function closeNicknameWindow() {
 
 // user is Online
 let usersOnline;
-socket.on("whoIsOnline", function (onlineUsers) {
+socket.on("whoIsOnline", function (onlineUsers, room_name) {
   let whoIsOnlineMessage = "";
   usersOnline = onlineUsers;
   for (let i = 0; i < usersOnline.length; i++) {
     if (whoIsOnlineMessage == "") {
-      whoIsOnlineMessage = "Users Online: " + usersOnline[i];
+      whoIsOnlineMessage = "Users Online in " + room_name + ": " + usersOnline[i];
     } else {
       whoIsOnlineMessage += ", " + usersOnline[i];
     }
@@ -101,5 +102,3 @@ function addUserMessage(msg, isPrivate=false) {
   }
   window.scrollTo(0, document.body.scrollHeight);
 }
-
-

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+
+<html lang="en">  
+    <head>
+        <meta charset="UTF-8">
+        <title>JaanChat</title>
+        <link rel="stylesheet" href="/styles/select_style.css">   
+        <link rel="icon" href="/styles/favicon.ico">   
+    </head>
+
+    <body>
+        <div class="select-button">
+            <a href="/general"><button>Enter General Chat</button></a>
+            <button id="enter-room-button">Enter Existing Room</button>
+            <button id="create-room-button">Create New Room</button>
+        </div>
+
+        <form class="select-button" id="existing" method="post">
+            <label for="eroom">Room Name</label>
+            <input type="text" id="eroom" name = "eroom"> 
+            <button type="submit" value="Enter">Enter</button>
+        </form>
+
+        <form class="select-button" action="/createroom" id="create" method="post">
+            <label for="croom">Room Name</label>
+            <input type="text" id="croom" name="croom">
+            <br>
+            <label for="pass">Need Password?</label>
+            <input type="checkbox" id="pass" name="pass">
+            <br>
+            <label for="password">Password</label>
+            <input type="text" id="password" disabled name="password">
+            <br>
+            <label for="save">Save Messages</label>
+            <input type="checkbox" id="save" name="save">
+            <br>
+            <button type="submit" value="Submit">Submit</button>
+        </form>
+    </body>
+
+
+</html>
+
+<script>
+    let enterButton = document.getElementById("enter-room-button");
+    let enterButtonVisibility = false;
+    let enterForm = document.getElementById("existing");
+
+    enterButton.onclick = function(){
+        if(enterButtonVisibility){
+            enterForm.style.display = "none";
+            enterButtonVisibility = false;
+        } else{
+            enterForm.style.display = "flex";
+            enterButtonVisibility = true;
+            document.getElementById("eroom").focus();
+        }
+    }
+
+    let createButton = document.getElementById("create-room-button");
+    let createButtonVisibility = false;
+    let createForm = document.getElementById("create");
+
+    createButton.onclick = function(){
+        if(createButtonVisibility){
+            createForm.style.display = "none";
+            createButtonVisibility = false;
+        } else{
+            createForm.style.display = "block";
+            createButtonVisibility = true;
+            document.getElementById("croom").focus();
+        }
+    }
+
+    let isPassSelected = false;
+    let passSelection = document.getElementById("pass");
+    passSelection.onclick = function(){
+        if(isPassSelected){
+            isPassSelected = false;
+            document.getElementById("password").disabled = true;
+        } else{
+            isPassSelected = true;
+            document.getElementById("password").disabled = false;
+        }
+    } 
+
+</script>

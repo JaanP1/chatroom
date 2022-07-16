@@ -1,4 +1,4 @@
-body {
+body{
   margin: 0;
   margin-top: 2.5rem;
   padding-bottom: 5rem;
@@ -28,7 +28,6 @@ button{
   color: #fff; 
 }
 
-
 /*Nickname*/
 #nickname{
   position:fixed;
@@ -43,7 +42,7 @@ button{
   background-color: rgba(0,0,0,0.4);
 }
 
-#nick-form{ 
+#nick-form { 
   position: relative;
   display: flex;
 
@@ -199,5 +198,4 @@ button{
 
 #message-input:focus { 
   outline: none; 
-}      
-    
+}
