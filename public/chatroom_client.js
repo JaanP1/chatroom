@@ -75,11 +75,24 @@ messageForm.onsubmit = function (e) {
 };
 
 // Receive Message
+let newMessageAmount = 0;
+let notificationSound = document.getElementById("notificationSound");
+
 socket.on("chat message", function (msg) {
   if (isNicknameChosen) {
+    if (!window.hidden){
+      newMessageAmount += 1
+      document.title = "New Message! (" + newMessageAmount + ")";
+      notificationSound.play();
+    }
     addUserMessage(msg, false);
   }
 });
+
+window.onfocus = () => {
+  document.title = "JaanChat";
+  newMessageAmount = 0;
+};
 
 socket.on("private message", function (from, msg) {
   if (isNicknameChosen) {
