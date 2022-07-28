@@ -104,7 +104,9 @@ io.of("/").on("connection", (socket) => {
 
     checkConnectedUsers();
     socket.to(socket.roomName).emit("chat message", socket.username + " has entered the chat.");
-    socket.emit("load previous messages", preloadedMessages);
+    if(preloadedMessages){
+      socket.emit("load previous messages", preloadedMessages);
+    }
   });
 
   //when the user disconnects
