@@ -115,3 +115,30 @@ function addUserMessage(msg, isPrivate=false) {
   }
   window.scrollTo(0, document.body.scrollHeight);
 }
+
+//Uploading Images
+let uploadImageButton = document.getElementById("sendImage");
+let imageSubmit = document.getElementById("imageSubmit");
+
+// when Upload Image button is clicked, let the user select file to upload
+uploadImageButton.onclick = () => {
+  imageSubmit.click();
+}
+
+// when a file (images only) is submitted, check the file size
+// if the file size is larger than half a MB, send alert to user
+imageSubmit.onchange = (e) => {
+  const image = imageSubmit.files[0];
+  let maxSize = 524288; // half MB
+
+  if(image.size > maxSize){
+    alert("Image is too big!");
+  }
+  else{
+    const fileReader = new FileReader();
+    fileReader.readAsDataURL(image);
+    fileReader.onload = () => {
+      addUserMessage(fileReader.result);
+    }
+  }
+}
