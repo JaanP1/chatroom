@@ -26,8 +26,12 @@ function checkPasswordRequirement(chatroom_name){ // return true if chatroom has
 
 async function createNewChatroom(chatroom_name, is_password_needed = false, password, is_saved = false){
     let doesItExist = await checkChatroomExists(chatroom_name)
+    // console.log(password);
     if (!doesItExist){
-        const hashedPassword = await hashPassword(password);
+        let hashedPassword = null;
+        if (password){
+            hashedPassword = await hashPassword(password);
+        }
         let sql = "INSERT INTO chatrooms (chatroom_name, is_password_needed, password, is_saved) VALUES(" + mysql.escape(chatroom_name) + "," + mysql.escape(is_password_needed) + "," + mysql.escape(hashedPassword) + "," + mysql.escape(is_saved) + ");";
         database_connection.query(sql, function(e, res, fields){
             if (e) throw e;
@@ -74,7 +78,7 @@ async function checkPassword(chatroom_name, password){
     try{
         return await bcrypt.compare(password, passToCompare);
     } catch(e){
-        console.log(error);
+        console.log(e, passToCompare);
     }
 
     return false;
@@ -92,7 +96,7 @@ async function databaseInitialise(){
         if (e) throw e;
     });
 
-    let sql = "CREATE TABLE IF NOT EXISTS messages(message_id int not null auto_increment primary key, chatroom_name varchar(255), sent_by varchar(255), message text, is_private bool, sent_to varchar(255));";
+    let sql = "CREATE TABLE IF NOT EXISTS messages(message_id int not null auto_increment primary key, chatroom_name varchar(255), sent_by varchar(255), message text, is_private bool, sent_to varchar(255), is_image bool);";
     database_connection.query(sql, function(e, res, fields){
         if (e) throw e;
     });
@@ -101,23 +105,60 @@ async function databaseInitialise(){
     database_connection.query(sql, function(e, res, fields){
         if (e) throw e;
     });
+
+    sql = "CREATE TABLE IF NOT EXISTS images(image_id int not null auto_increment primary key, file_name varchar(255) not null, directory varchar(255) not null, file_type varchar(255) not null, message_id int);";
+    database_connection.query(sql, function(e, res, fields){
+        if (e) throw e;
+    });
 };
   
-function insertMessage(chatroom_id, username, message, is_private){
-    let sql = "INSERT INTO messages (chatroom_id, sent_by, message, is_private) VALUES("+ chatroom_id + "," + mysql.escape(username) + "," + mysql.escape(message) + "," + mysql.escape(is_private) + ");";
+function insertMessage(chatroom_id, username, message, is_private, is_image=false){
+    let sql = "INSERT INTO messages (chatroom_id, sent_by, message, is_private, sent_to, is_image) VALUES("+ chatroom_id + "," + mysql.escape(username) + "," + mysql.escape(message) + "," + mysql.escape(is_private) + "," + mysql.escape(null) + "," + mysql.escape(is_image) + ");";
     database_connection.query(sql, function(e, res, fields){
         if (e) throw e;
     });
 }
 
-
-function getMessages(chatroom_id){
-    let sql = "SELECT * FROM messages WHERE chatroom_id = " + mysql.escape(chatroom_id) + " and is_private = false order by message_id desc limit 50";
+async function insertMessageGetId(chatroom_id, username, message, is_private, is_image=false){
+    let sql = "INSERT INTO messages (chatroom_id, sent_by, message, is_private, sent_to, is_image) VALUES("+ chatroom_id + "," + mysql.escape(username) + "," + mysql.escape(message) + "," + mysql.escape(is_private) + "," + mysql.escape(null) + "," + mysql.escape(is_image) + ");";
     return new Promise((resolve, reject) => {
         database_connection.query(sql, function(e, res, fields){
-            //console.log(res]);
             if (e) reject(e);
-            if (res[0]) resolve(res);
+            if (res[0]){//console.log(res);
+                resolve(1);
+            } 
+            else resolve(0);
+        });
+    });
+}
+
+async function getLastInsertedID(){
+    let sql = "select last_insert_id();";
+    return new Promise((resolve, reject) => {
+        database_connection.query(sql, function(e, res, fields){
+            if (e) reject(e);
+            if (res[0]) resolve(res[0][Object.keys(res[0])[0]]);
+            else resolve(0);
+        });
+    });
+}
+
+async function insertImage(file_name, directory, file_type, chatroom_id, username, message, is_private, is_image=false){
+    await insertMessageGetId(chatroom_id, username, message, is_private, is_image);
+    let message_id = await getLastInsertedID();
+    let sql = "INSERT INTO images(file_name, directory, file_type, message_id) VALUES(" + mysql.escape(file_name) + "," + mysql.escape(directory) + "," + mysql.escape(file_type) + "," + mysql.escape(message_id) + ");";
+    database_connection.query(sql, function(e, res, fields){
+        if (e) throw e;
+    });
+}
+
+function getMessages(chatroom_id){
+    // let sql = "SELECT * FROM messages where chatroom_id = " + mysql.escape(chatroom_id) +';';
+    let sql = "SELECT * FROM messages LEFT JOIN images on messages.message_id = images.message_id WHERE chatroom_id = " + mysql.escape(chatroom_id) + " and is_private = false order by messages.message_id desc limit 50";
+    return new Promise((resolve, reject) => {
+        database_connection.query(sql, function(e, res, fields){
+            if (e) reject(e);
+            if (res) resolve(res);
             else resolve(0);
         });
     });
@@ -127,8 +168,8 @@ async function hashPassword(password){
     try{
         const salt = await bcrypt.genSalt(10);
         return await bcrypt.hash(password, salt);
-    } catch (error){
-        console.log(error);
+    } catch (e){
+        console.log(e);
     }
 
     return null;
@@ -142,5 +183,6 @@ module.exports = {
     checkPasswordRequirement,
     checkPassword,
     getChatroomId,
-    isSaved
+    isSaved,
+    insertImage
 };

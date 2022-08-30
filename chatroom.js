@@ -1,3 +1,4 @@
+console.log("Server Start");
 const express = require("express");
 const app = express();
 const http = require("http");
@@ -9,13 +10,15 @@ const { isUndefined } = require("util");
 // const mysql = require('mysql');
 const database = require('./database');
 const bodyParser = require("body-parser");
+const fs = require("fs");
+const spr = require("@supercharge/strings");
 
-console.log("Server Start");
 let roomName = null;
-let chatroom_id = null;
-let is_saved = false;
+let chatroom_id = {};
+let is_saved = {};
 let isPassEnter = false;
-let preloadedMessages = null;
+let preloadedMessages = {};
+let connectedUsers = {};
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.urlencoded({extended: true}));
@@ -24,17 +27,36 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
+async function getPreloadedMessages(chatroom_id){
+  let rawMessages = await database.getMessages(chatroom_id);
+  let cleanMessages = [];
+  for(message of rawMessages){
+    if(message['is_image']){
+      const directory = path.join(message['directory'], message['file_name'] + '.' + message['file_type']);
+      try{
+        let imageFromFile = fs.readFileSync(directory, 'base64');
+        let image64Url = 'data:image/' + message['file_type'] + ';base64,' + imageFromFile;
+        cleanMessages.push([message['sent_by'], message['message'], message['is_image'], image64Url]);
+      } catch(e){
+
+      }
+      
+    } else{
+      cleanMessages.push([message['sent_by'], message['message'], message['is_image']]);
+    }
+  }
+
+  return cleanMessages;
+}
+
 app.get("/:id", async (req, res) => {
   roomName = req.params.id;
   database.databaseInitialise();
-  if (!chatroom_id){
-    chatroom_id = await database.getChatroomId(roomName);
-  }
-
-  is_saved = await database.isSaved(roomName);
-
-  if (is_saved && !preloadedMessages){
-    preloadedMessages = await database.getMessages(chatroom_id);
+  await database.createNewChatroom(roomName);
+  chatroom_id[roomName] = await database.getChatroomId(roomName);
+  is_saved[roomName] = await database.isSaved(roomName);
+  if (is_saved[roomName]){
+    preloadedMessages[roomName] = await getPreloadedMessages(chatroom_id[roomName]);
   }
   const badName = new Set(["password", "createroom", "login", "index","pass-form"]);
 
@@ -43,6 +65,7 @@ app.get("/:id", async (req, res) => {
   }
 
   let isPassRequired = await database.checkPasswordRequirement(roomName);
+
   if (isPassRequired && !isPassEnter){
     res.sendFile(__dirname + "/public/login.html");
   }
@@ -60,19 +83,21 @@ app.post("/", (req, res) => {
   }
 });
 
+
+
 app.post("/createroom", async (req, res) => {
   let body = req.body;
   roomName = body.croom;
   if (roomName.trim()){
+    if(body.pass == "on" && !body.password){
+      res.redirect("/");
+      return;
+    }
     database.databaseInitialise();
     await database.createNewChatroom(roomName, body.pass == "on" ? true : false , body.password, body.save == "on" ? true : false);
     isPassEnter = body.pass == "on" ? true : false;
-    chatroom_id = await database.getChatroomId(roomName);
-    is_saved = await database.isSaved(roomName);
-    if (is_saved){
-      preloadedMessages = await database.getMessages(chatroom_id);
-      //console.log("this is prelaoded" , preloadedMessages);
-    }
+    chatroom_id[roomName] = await database.getChatroomId(roomName);
+    is_saved[roomName] = await database.isSaved(roomName);
     res.redirect(roomName);
   }
 });
@@ -86,7 +111,7 @@ app.post("/pass-form", async (req, res) => {
 //when a user establishes a new connection
 io.of("/").on("connection", (socket) => {
   socket.join(roomName);
-
+  // todo is_saved and preloaded messages are getting mixewd up between rooms
   socket.roomName = roomName;
   socket.on("nickname", (nickname) => {
     if (!nickname.trim() || !nickname) {
@@ -100,12 +125,14 @@ io.of("/").on("connection", (socket) => {
     socket.username = nickname;
 
     database.databaseInitialise();
-    database.createNewChatroom(roomName);
-
+    
     checkConnectedUsers();
+    
     socket.to(socket.roomName).emit("chat message", socket.username + " has entered the chat.");
-    if(preloadedMessages){
-      socket.emit("load previous messages", preloadedMessages);
+    if(is_saved[roomName]){
+      //console.log(preloadedMessages[roomName], roomName);
+      socket.emit("load previous messages", preloadedMessages[roomName]);
+      //preloadedMessages = null;
     }
   });
 
@@ -122,18 +149,22 @@ io.of("/").on("connection", (socket) => {
   });
 
   function checkConnectedUsers() {
+    
     if (socket.username == undefined || socket.username == null) {
       return;
     }
     
-    io.in(roomName).allSockets().then(function(value){
-      let connectedUsers = [];
+    io.in(socket.roomName).allSockets().then(function(value){
+      let addToConnectedUsers = [];
       for (const name of value){
         if (io.of("/").sockets.get(name).username != undefined) {
-          connectedUsers.push(io.of("/").sockets.get(name).username);
+          addToConnectedUsers.push(io.of("/").sockets.get(name).username);
         }
       }
-      io.to(socket.roomName).emit("whoIsOnline", connectedUsers, roomName);
+
+      connectedUsers[socket.roomName] = addToConnectedUsers;
+      
+      io.to(socket.roomName).emit("whoIsOnline", connectedUsers[socket.roomName], socket.roomName);
     });
     return;
   }
@@ -141,8 +172,43 @@ io.of("/").on("connection", (socket) => {
   //when the user sends a chat message
   socket.on("chat message", (message) => {
     socket.broadcast.to(socket.roomName).emit("chat message", socket.username + ": " + message);
-    if(is_saved){
-      database.insertMessage(chatroom_id, socket.username, message, false);
+    if(is_saved[roomName]){
+      database.insertMessage(chatroom_id[socket.roomName], socket.username, message, false, false);
+    }
+  });
+
+  socket.on("send image", (user, image) => { // socket for sending an image, gets the name of the user sending it and the image in binary format
+    socket.broadcast.to(socket.roomName).emit("receive image", user, image); // send the images to users in the room other than the sender
+
+    if(is_saved[socket.roomName]){ // if the messages in the chatroom is saved, proceed to save the image in the disk and realted info in the database
+      // separating header from the data (image)
+      let imageSplit = image.split(',');
+      let fileType = imageSplit[0].split('/')[1].split(';')[0];
+      const buffer = Buffer.from(imageSplit[1], "base64"); // use this to encode the binary data into base64
+
+      
+      // Check and Generate Directory to store the image, directory is sent_images/{chatroom}
+      const directory = path.join(__dirname , 'sent_images' , socket.roomName);
+
+      fs.mkdir(directory, (e) => { // generate directory
+          if(e){
+
+          }
+        });
+
+      // Generate a random filename with a length of 10 characters here
+      let fileName = spr.random(10);
+
+      // check if file name exists, if it does, get a different one
+      while (fs.existsSync(path.join(directory , fileName + '.' + fileType))) {
+        fileName = spr.random(10);
+      }
+
+      // Save image into the disk
+      fs.writeFileSync(path.join(directory , fileName + '.' + fileType), buffer);
+      
+      // store image name, image location, type chatroom_id, username into the database
+      database.insertImage(fileName, directory, fileType, chatroom_id[socket.roomName], socket.username, null, false, true);
     }
   });
 
