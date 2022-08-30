@@ -27,6 +27,7 @@ function closeNicknameWindow() {
 }
 
 // user is Online
+
 let usersOnline;
 socket.on("whoIsOnline", function (onlineUsers, room_name) {
   let whoIsOnlineMessage = "";
@@ -89,6 +90,17 @@ socket.on("chat message", function (msg) {
   }
 });
 
+socket.on("receive image", (user, image) => {
+  if (isNicknameChosen) {
+    if (!window.hidden){
+      newMessageAmount += 1
+      document.title = "New Message! (" + newMessageAmount + ")";
+      notificationSound.play();
+    }
+    addImages(user, image);
+  }
+});
+
 window.onfocus = () => {
   document.title = "JaanChat";
   newMessageAmount = 0;
@@ -101,8 +113,15 @@ socket.on("private message", function (from, msg) {
 });
 
 socket.on("load previous messages", function(msg_block){
+  if (!msg_block) return;
+
   for (let i = msg_block.length - 1; i >= 0; i--){
-    addUserMessage(msg_block[i]['sent_by'] + ": " + msg_block[i]['message']);
+    if(msg_block[i][2]){
+      addImages(msg_block[i][0], msg_block[i][3]);
+    }
+    else{
+      addUserMessage(msg_block[i][0] + ": " + msg_block[i][1]);
+    }
   }
 });
 
@@ -114,6 +133,20 @@ function addUserMessage(msg, isPrivate=false) {
     item.style.backgroundColor = "rgba(255, 75, 75, 0.75)";
   }
   window.scrollTo(0, document.body.scrollHeight);
+}
+
+function addImages(user, image){
+  let item = document.createElement("li");
+  item.textContent = user + " sent: ";
+  let linebreak = document.createElement("br");
+  item.appendChild(linebreak);
+  item.appendChild(linebreak);
+  let img = document.createElement("img");
+  img.src = image;
+  item.appendChild(img);
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
+  
 }
 
 //Uploading Images
@@ -138,7 +171,10 @@ imageSubmit.onchange = (e) => {
     const fileReader = new FileReader();
     fileReader.readAsDataURL(image);
     fileReader.onload = () => {
-      addUserMessage(fileReader.result);
+      addImages(nickname, fileReader.result);
+      socket.emit("send image", nickname, fileReader.result);
     }
   }
+  messageInput.focus();
 }
+

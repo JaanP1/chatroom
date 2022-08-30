@@ -2,6 +2,8 @@
 let isPrivateUserListVisible = false;
 let isPrivateMessageModeActive = false;
 let sendPrivateMessageTo;
+//let uploadImageButton = document.getElementById("sendImage");
+let cancelButton2 = document.getElementById("cancel");
 let privateMessageUserList = document.getElementById(
   "private-message-user-list"
 );
@@ -14,6 +16,7 @@ let privateMessageSendingToMessage = document.getElementById(
 
 // when the Private Message at the top right corner of the screen is clicked
 document.getElementById("private-message-button").onclick = function () {
+  //alert("yo");
   if (usersOnline.length <= 1 && !isPrivateUserListVisible) {
     return;
   }
@@ -39,6 +42,7 @@ document.getElementById("private-message-button").onclick = function () {
   }
 
   // Check any click on the private message button and activate private message mode
+
   for (let i = 0; i < privateMessageUserButtons.length; i++) {
     privateMessageUserButtons[i].onclick = function () {
       privateMessageSendingToMessage.style.display = "inline";
@@ -54,19 +58,32 @@ document.getElementById("private-message-button").onclick = function () {
         ? "none"
         : "block";
       isPrivateUserListVisible = !isPrivateUserListVisible;
+      cancelButton2.style.display = "block";
+      uploadImageButton.style.display = "none";
       isPrivateMessageModeActive = true;
     };
   }
 };
 
 // cancel button, gets rid of any input and takes user out of private messsage mode
-document.getElementById("cancel").onclick = cancelPrivateMessageMode();
 
-function cancelPrivateMessageMode() {
+cancelButton2.onclick = () => {
   if (isPrivateMessageModeActive) {
     privateMessageSendingToMessage.style.display = "none";
     messageForm.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
     messageInput.style.backgroundColor = "white";
+    cancelButton2.style.display = "none";
+    uploadImageButton.style.display = "block";
     isPrivateMessageModeActive = false;
   }
+}
+
+
+function cancelPrivateMessageMode(){
+  privateMessageSendingToMessage.style.display = "none";
+  messageForm.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
+  messageInput.style.backgroundColor = "white";
+  cancelButton2.style.display = "none";
+  uploadImageButton.style.display = "block";
+  isPrivateMessageModeActive = false;
 }
