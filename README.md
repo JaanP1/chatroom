@@ -1,6 +1,6 @@
 <h1>Chatroom Application</h1>
 
-A lightweight and easy to use chatroom application made for quick communications between people. No hassle, no account needed, simply create a room and share the link with friends. User has the options for saving messages and protecting the room with a password. It was built with HTML, CSS, Javascript and NodeJS using socket.io API. Go to jaanparekh.com to test the application, use multiple tabs to test features (the application treats each tab as a different user).
+A lightweight and easy to use chatroom application made for quick communications between people. No hassle, no account needed, simply create a room and share the link with friends to message and share images. Users have the option to save messages and protecting rooms with a password. It was built with HTML, CSS, Javascript and NodeJS using socket.io API. Go to jaanparekh.com to test the application, use multiple tabs to test features (the application will treat each tab as a different user).
 
 
 <h2> Features </h2>
@@ -14,13 +14,7 @@ A lightweight and easy to use chatroom application made for quick communications
   <li> Option for saving messages in a room </li>
   <li> Option to create password protected rooms </li>
   <li> Notifications </li>
-</ul>
-
-<h2>Upcoming Features </h2>
-
-<ul>
   <li> Sending, receiving and saving images</li>
-  <li> End-to-end encryption </li>
 </ul>
 
 <h2> How to use</h2>
@@ -68,7 +62,7 @@ The solution can still be improved. Firstly, we can add server side validation t
 <h3> Designing the database for saving messages and rooms</h3>
 
 <h4>Design</h4>
-This project uses a relational database, MySql. There are two tables, chatrooms and messages. The chatroom table records chatroom_id (key), chatroom_name (text), is_password_needed (boolean), password (encrypted with bcrypt) and is_saved (boolean). The message table records message_id(key), chatroom_id (the key of the chatroom the message was sent in), sent_by (text), message (text), is_private (boolean) and sent_to (text).
+This project uses a relational database, MySql. There are three tables, chatrooms, messages and images. The chatroom table records chatroom_id (key), chatroom_name (text), is_password_needed (boolean), password (encrypted with bcrypt) and is_saved (boolean). The message table records message_id(key), chatroom_id (the key of the chatroom the message was sent in), sent_by (text), message (text), is_private (boolean), sent_to (text) and is_image (boolean). THe image table records file_name(text), file_type(text), directory(text) and mesage_id(int).
 
 <h4>Next Steps</h4>
 Add a new column for messages called is_image. Create a new table called images with the following columns: add message_id(key), file_name, directory, file_type and message_id (connect messages and images).
@@ -97,3 +91,29 @@ Reduce database calls by:
   <li>Get all chatroom properties in a single call from the database. </li>
   <li>Fetch the previous messages after the password is entered correctly to minimize database calls.</li>
 </ol>
+
+
+<h3> Sending, receiving and saving images</h3>
+
+<h4> How it works </h4>
+Sending and receiving images were simple. Convert the image into a base64url, send it and then convert to an image on the receivers side.
+Saving and retrieving on the other hand required more thought. There were three possible implementations for this feature, below I will explain each and my thought process as to why I chose or didn't choose them.
+
+<h5>Method 1: Store the images as a BLOB (Binary Large Object) in the database</h5>
+<h6> Not chosen </h6>
+Advantages: Storing the image inside a database will ensure the integrity of the file (ACID principles). <br>
+Disadvantages: Reading and writing large files into a database can cause performance and memory issues.<br>
+Verdict: Not chosen due to performance issues and the integrity of the image is not a concern as long as it is visible to the humam eye.
+
+<h5>Method 2: Store the images inside the disk and the directory inside the database</h5>
+<h6> Chosen </h6>
+Advantages: Storing the image inside the disk is cheaper compared to storing in the database in terms of performance and memory. <br>
+Disadvantages: It is easier for users to gain access to images they are not supposed to, if you are not careful.<br>
+Verdict: Chosen, because of better performance and data of that size is better suited for disk, compared to databases. It is also easy to deny access to users from simply going into the image folders. However, there is another method below that will scale better for a bigger application.
+
+<h5> Method 3: Amazon S3 </h5>
+<h6> Not chosen </h6>
+
+Advantages: Cheap, easy to use and scalable.<br>
+Disadvantages: Need to create Amazon Account.<br>
+Verdict: Not chosen, due to the fact that I already payed for disk space... Will be the first choice if the application had more users and need for more data storage services.
