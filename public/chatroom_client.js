@@ -163,11 +163,12 @@ uploadImageButton.onclick = () => {
 imageSubmit.onchange = (e) => {
   const image = imageSubmit.files[0];
   let maxSize = 524288; // half MB
-
   if(image.size > maxSize){
     alert("Image is too big!");
   }
   else{
+    uploadImageButton.disabled = true;
+    setTimeout(enableButton, 2000);
     const fileReader = new FileReader();
     fileReader.readAsDataURL(image);
     fileReader.onload = () => {
@@ -178,3 +179,4 @@ imageSubmit.onchange = (e) => {
   messageInput.focus();
 }
 
+enableButton = () => uploadImageButton.disabled = false;

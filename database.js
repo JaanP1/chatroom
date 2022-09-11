@@ -72,6 +72,19 @@ async function isSaved(chatroom_name){
     });
 }
 
+async function getProperties(chatroom_name){
+    let sql = 'select chatroom_id, is_saved from chatrooms where chatroom_name = ' + mysql.escape(chatroom_name) +  ';';
+    return new Promise((resolve, reject) => {
+        database_connection.query(sql, function(e, res, fields){
+            
+            if (e) reject(e);
+            if (res[0]) resolve([res[0][Object.keys(res[0])[0]], res[0][Object.keys(res[0])[1]]]);
+            else resolve(0);
+        });
+    });
+}
+
+
 async function checkPassword(chatroom_name, password){
     const passToCompare = await getPassword(chatroom_name);
 
@@ -184,5 +197,6 @@ module.exports = {
     checkPassword,
     getChatroomId,
     isSaved,
-    insertImage
+    insertImage,
+    getProperties
 };
