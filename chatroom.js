@@ -51,18 +51,22 @@ async function getPreloadedMessages(chatroom_id){
 
 app.get("/:id", async (req, res) => {
   roomName = req.params.id;
-  database.databaseInitialise();
-  await database.createNewChatroom(roomName);
-  chatroom_id[roomName] = await database.getChatroomId(roomName);
-  is_saved[roomName] = await database.isSaved(roomName);
-  if (is_saved[roomName]){
-    preloadedMessages[roomName] = await getPreloadedMessages(chatroom_id[roomName]);
-  }
   const badName = new Set(["password", "createroom", "login", "index","pass-form"]);
 
   if(badName.has(roomName.toLowerCase())){
     res.redirect("/");
   }
+  
+  database.databaseInitialise();
+  await database.createNewChatroom(roomName);
+  let properties = await database.getProperties(roomName);
+  chatroom_id[roomName] = properties[0];
+  is_saved[roomName] = properties[1];
+  
+  if (is_saved[roomName]){
+    preloadedMessages[roomName] = await getPreloadedMessages(chatroom_id[roomName]);
+  }
+  
 
   let isPassRequired = await database.checkPasswordRequirement(roomName);
 
@@ -75,6 +79,10 @@ app.get("/:id", async (req, res) => {
   }
 
 });
+
+app.get("*", (req, res) => {
+  res.redirect("/");
+})
 
 app.post("/", (req, res) => {
   roomName = req.body.eroom;
@@ -96,8 +104,9 @@ app.post("/createroom", async (req, res) => {
     database.databaseInitialise();
     await database.createNewChatroom(roomName, body.pass == "on" ? true : false , body.password, body.save == "on" ? true : false);
     isPassEnter = body.pass == "on" ? true : false;
-    chatroom_id[roomName] = await database.getChatroomId(roomName);
-    is_saved[roomName] = await database.isSaved(roomName);
+    let properties = await database.getProperties(roomName);
+    chatroom_id[roomName] = properties[0];
+    is_saved[roomName] = properties[1];
     res.redirect(roomName);
   }
 });
@@ -178,37 +187,44 @@ io.of("/").on("connection", (socket) => {
   });
 
   socket.on("send image", (user, image) => { // socket for sending an image, gets the name of the user sending it and the image in binary format
-    socket.broadcast.to(socket.roomName).emit("receive image", user, image); // send the images to users in the room other than the sender
 
-    if(is_saved[socket.roomName]){ // if the messages in the chatroom is saved, proceed to save the image in the disk and realted info in the database
-      // separating header from the data (image)
-      let imageSplit = image.split(',');
-      let fileType = imageSplit[0].split('/')[1].split(';')[0];
-      const buffer = Buffer.from(imageSplit[1], "base64"); // use this to encode the binary data into base64
+    
+    if (Buffer.byteLength(image, 'utf8') > 1048576){
+      socket.to(socket).emit("chat message", "The Image Size is too Large!");
+    }
+    else{
+      socket.broadcast.to(socket.roomName).emit("receive image", user, image); // send the images to users in the room other than the sender
 
-      
-      // Check and Generate Directory to store the image, directory is sent_images/{chatroom}
-      const directory = path.join(__dirname , 'sent_images' , socket.roomName);
+      if(is_saved[socket.roomName]){ // if the messages in the chatroom is saved, proceed to save the image in the disk and realted info in the database
+        // separating header from the data (image)
+        let imageSplit = image.split(',');
+        let fileType = imageSplit[0].split('/')[1].split(';')[0];
+        const buffer = Buffer.from(imageSplit[1], "base64"); // use this to encode the binary data into base64
 
-      fs.mkdir(directory, (e) => { // generate directory
-          if(e){
+        
+        // Check and Generate Directory to store the image, directory is sent_images/{chatroom}
+        const directory = path.join(__dirname , 'sent_images' , socket.roomName);
 
-          }
-        });
+        fs.mkdir(directory, (e) => { // generate directory
+            if(e){
 
-      // Generate a random filename with a length of 10 characters here
-      let fileName = spr.random(10);
+            }
+          });
 
-      // check if file name exists, if it does, get a different one
-      while (fs.existsSync(path.join(directory , fileName + '.' + fileType))) {
-        fileName = spr.random(10);
+        // Generate a random filename with a length of 10 characters here
+        let fileName = spr.random(10);
+
+        // check if file name exists, if it does, get a different one
+        while (fs.existsSync(path.join(directory , fileName + '.' + fileType))) {
+          fileName = spr.random(10);
+        }
+
+        // Save image into the disk
+        fs.writeFileSync(path.join(directory , fileName + '.' + fileType), buffer);
+        
+        // store image name, image location, type chatroom_id, username into the database
+        database.insertImage(fileName, directory, fileType, chatroom_id[socket.roomName], socket.username, null, false, true);
       }
-
-      // Save image into the disk
-      fs.writeFileSync(path.join(directory , fileName + '.' + fileType), buffer);
-      
-      // store image name, image location, type chatroom_id, username into the database
-      database.insertImage(fileName, directory, fileType, chatroom_id[socket.roomName], socket.username, null, false, true);
     }
   });
 
